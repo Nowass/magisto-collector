@@ -664,6 +664,14 @@ def is_video_already_downloaded_by_name(driver, video_url, download_dir):
     # Stránka už je načtená, jen získáme název
     video_name = get_video_name_from_widget(driver)
     
+    # NOVÉ: Pokud je video bez názvu ("Untitled"), vždy stáhnout
+    if (video_name and 
+        (video_name.lower() in ['untitled', 'bez názvu', 'no title', 'no name', 'untitled video', 'new video', 'video', 'my video'] or
+         len(video_name.strip()) <= 2)):  # Velmi krátké názvy (1-2 znaky) považovat za obecné
+        logging.info(f"   ⚠️ Video má obecný název '{video_name}' - bude staženo znovu pro lepší pojmenování")
+        logging.info(f"   💡 Obecné názvy jako 'Untitled', 'My video' se nikdy nepřeskakují")
+        return False, None
+    
     if video_name:
         logging.info(f"   🔍 Hledám soubory pro název '{video_name}'...")
         
