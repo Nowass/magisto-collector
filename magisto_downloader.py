@@ -13,21 +13,21 @@ from webdriver_manager.chrome import ChromeDriverManager
 import platform
 import os.path
 
-# === KONFIGURACE ===
-# Credentials (pouze pro automatické přihlášení - lze nechat prázdné pro manuální login)
-MAGISTO_EMAIL = ""  # můžeš vymazat pro manuální login
-MAGISTO_PASSWORD = ""  # můžeš vymazat pro manuální login
-DOWNLOAD_DIR = "/home/nowass/Videos/Magisto"  # uprav podle sebe
+# === CONFIGURATION ===
+# Credentials (leave empty for manual login)
+MAGISTO_EMAIL = ""  # you can leave empty for manual login
+MAGISTO_PASSWORD = ""  # you can leave empty for manual login
+DOWNLOAD_DIR = "/home/nowass/Videos/Magisto"  # adjust to your needs
 
-# Nastavení prohlížeče - "chrome" nebo "brave"
-# POZOR: Brave může mít problémy s verzí ChromeDriveru - doporučujeme Chrome
-BROWSER_TYPE = "chrome"  # změň na "brave" pokud máš kompatibilní verzi
+# Browser settings - "chrome" or "brave"
+# WARNING: Brave may have issues with ChromeDriver version - we recommend Chrome
+BROWSER_TYPE = "chrome"  # change to "brave" if you have compatible version
 
-WAIT_AFTER_DOWNLOAD = 10  # vteřiny pro počkání po kliknutí na "Download"
-LOGIN_TIMEOUT = 20  # timeout pro nalezení elementů při přihlášení
-DOWNLOAD_TIMEOUT = 15  # timeout pro nalezení download tlačítka
+WAIT_AFTER_DOWNLOAD = 10  # seconds to wait after clicking "Download"
+LOGIN_TIMEOUT = 20  # timeout for finding elements during login
+DOWNLOAD_TIMEOUT = 15  # timeout for finding download button
 
-# === Nastavení logování ===
+# === Logging setup ===
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -37,9 +37,9 @@ logging.basicConfig(
     ]
 )
 
-# === Nastavení prohlížeče ===
+# === Browser setup ===
 def get_brave_binary_path():
-    """Najde cestu k Brave browseru na různých OS"""
+    """Find path to Brave browser on different OS"""
     system = platform.system()
     
     if system == "Linux":
@@ -71,63 +71,63 @@ def get_brave_binary_path():
     return None
 
 def setup_browser_driver():
-    """Nastavení prohlížeče (Chrome nebo Brave) s optimalizovanými možnostmi"""
+    """Setup browser (Chrome or Brave) with optimized options"""
     options = Options()
     options.add_experimental_option("prefs", {
         "download.default_directory": DOWNLOAD_DIR,
         "download.prompt_for_download": False,
         "safebrowsing.enabled": True,
-        "profile.default_content_setting_values.notifications": 2  # blokovat notifikace
+        "profile.default_content_setting_values.notifications": 2  # block notifications
     })
     options.add_argument("--start-maximized")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     
-    # Vytvoření downloadovací složky
+    # Create download folder
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     
     if BROWSER_TYPE.lower() == "brave":
-        # Nastavení pro Brave browser
+        # Setup for Brave browser
         brave_path = get_brave_binary_path()
         if brave_path:
             options.binary_location = brave_path
-            logging.info(f"Pokouším se použít Brave browser: {brave_path}")
-            logging.warning("POZOR: Brave může mít problémy s verzí ChromeDriveru!")
-            logging.info("Pokud se vyskytnou chyby, změň BROWSER_TYPE na 'chrome'")
+            logging.info(f"Trying to use Brave browser: {brave_path}")
+            logging.warning("WARNING: Brave may have issues with ChromeDriver version!")
+            logging.info("If errors occur, change BROWSER_TYPE to 'chrome'")
         else:
-            logging.error("Brave browser nebyl nalezen! Přepínám na Chrome...")
-            logging.info("Nainstaluj Brave nebo změň BROWSER_TYPE na 'chrome'")
+            logging.error("Brave browser not found! Switching to Chrome...")
+            logging.info("Install Brave or change BROWSER_TYPE to 'chrome'")
     else:
-        logging.info("Používám Chrome browser")
+        logging.info("Using Chrome browser")
     
     try:
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        logging.info("Prohlížeč úspěšně spuštěn!")
+        logging.info("Browser successfully started!")
         return driver
     except Exception as e:
-        logging.error(f"Chyba při spuštění prohlížeče: {e}")
+        logging.error(f"Error starting browser: {e}")
         if BROWSER_TYPE.lower() == "brave":
-            logging.error("Problém s Brave browserem - pravděpodobně nekompatibilní verze ChromeDriveru")
-            logging.info("ŘEŠENÍ: Změň BROWSER_TYPE na 'chrome' v konfiguraci")
-            logging.info("Nebo nainstaluj starší verzi Brave nebo novější verzi ChromeDriveru")
+            logging.error("Problem with Brave browser - probably incompatible ChromeDriver version")
+            logging.info("SOLUTION: Change BROWSER_TYPE to 'chrome' in configuration")
+            logging.info("Or install older Brave version or newer ChromeDriver version")
         raise
 
 try:
     driver = setup_browser_driver()
     wait = WebDriverWait(driver, LOGIN_TIMEOUT)
 except Exception as e:
-    logging.error("Nelze spustit prohlížeč. Ukončuji script.")
+    logging.error("Cannot start browser. Exiting script.")
     exit(1)
 
-# === Pomocné funkce ===
+# === Helper functions ===
 def check_if_logged_in():
-    """Kontrola, zda je uživatel přihlášen"""
+    """Check if user is logged in"""
     try:
-        # Kontrola různých indikátorů přihlášení
+        # Check various login indicators
         login_indicators = [
-            # Pozitivní indikátory (když je přihlášen)
+            # Positive indicators (when logged in)
             "//a[contains(@href, '/video/mine')]",
             "//a[contains(@href, '/my-movies')]",
             "//button[contains(text(), 'Profile')]",
@@ -145,73 +145,73 @@ def check_if_logged_in():
                 else:
                     element = driver.find_element(By.CSS_SELECTOR, indicator)
                 if element:
-                    logging.info(f"   → Nalezen indikátor přihlášení: {indicator}")
+                    logging.info(f"   → Found login indicator: {indicator}")
                     return True
             except:
                 continue
         
-        # Kontrola URL - pokud jsme přesměrováni na dashboard nebo podobně
+        # Check URL - if redirected to dashboard or similar
         current_url = driver.current_url
         logged_in_patterns = ['/dashboard', '/video/', '/my-movies', '/profile']
         
         for pattern in logged_in_patterns:
             if pattern in current_url:
-                logging.info(f"   → URL indikuje přihlášení: {current_url}")
+                logging.info(f"   → URL indicates login: {current_url}")
                 return True
         
         return False
         
     except Exception as e:
-        logging.warning(f"Chyba při kontrole přihlášení: {e}")
+        logging.warning(f"Error checking login status: {e}")
         return False
 
-# === KROK 1: Přihlášení (Manual Login Support) ===
+# === STEP 1: Login (Manual Login Support) ===
 def login_to_magisto():
-    """Přihlášení na Magisto s podporou manuálního přihlášení"""
-    logging.info("[1/5] Otevírám Magisto login stránku...")
+    """Login to Magisto with manual login support"""
+    logging.info("[1/5] Opening Magisto login page...")
     
     try:
-        # Použití přímé login URL pro manuální přihlášení
+        # Use direct login URL for manual login
         driver.get("https://www.magisto.com/connect?q_offer_info=eyJpZCI6IjE0MDA1NDcwMjY5NzE3ODc1MzkiLCJleHBpcmF0aW9uIjoxNzUzNjgyMTc3ODQ4fQ%3D%3D")
         
-        logging.info("🔐 MANUÁLNÍ PŘIHLÁŠENÍ:")
-        logging.info("   → Otevřel jsem login stránku")
-        logging.info("   → Prosím, přihlas se ručně v prohlížeči")
-        logging.info("   → Po přihlášení stiskni ENTER v terminálu pro pokračování...")
+        logging.info("🔐 MANUAL LOGIN:")
+        logging.info("   → Opened login page")
+        logging.info("   → Please log in manually in the browser")
+        logging.info("   → Press ENTER in terminal after login to continue...")
         
-        # Čekání na manuální potvrzení
-        input("Stiskni ENTER po dokončení přihlášení...")
+        # Wait for manual confirmation
+        input("Press ENTER after completing login...")
         
-        # Kontrola, zda je uživatel přihlášen
+        # Check if user is logged in
         logged_in = check_if_logged_in()
         
         if logged_in:
-            logging.info("✅ Přihlášení úspěšné!")
+            logging.info("✅ Login successful!")
             return True
         else:
-            logging.error("❌ Zdá se, že přihlášení se nezdařilo")
+            logging.error("❌ Login seems to have failed")
             
-            # Pokusit se o automatické přihlášení jako fallback
-            logging.info("🔄 Pokouším se o automatické přihlášení...")
+            # Try automatic login as fallback
+            logging.info("🔄 Trying automatic login...")
             return attempt_automatic_login()
             
     except Exception as e:
-        logging.error(f"Chyba při přihlašování: {e}")
+        logging.error(f"Error during login: {e}")
         return False
 
 def attempt_automatic_login():
-    """Pokus o automatické přihlášení jako fallback"""
+    """Attempt automatic login as fallback"""
     
-    # Kontrola, zda jsou zadané credentials
+    # Check if credentials are provided
     if not MAGISTO_EMAIL or not MAGISTO_PASSWORD:
-        logging.warning("❌ Credentials nejsou nastaveny - automatické přihlášení nelze provést")
-        logging.info("💡 Nastav MAGISTO_EMAIL a MAGISTO_PASSWORD v konfiguraci pro automatické přihlášení")
+        logging.warning("❌ Credentials not set - automatic login not possible")
+        logging.info("💡 Set MAGISTO_EMAIL and MAGISTO_PASSWORD in configuration for automatic login")
         return False
     
     try:
-        logging.info("Hledám login formulář...")
+        logging.info("Looking for login form...")
         
-        # Hledání login tlačítka nebo formuláře
+        # Search for login button or form
         login_selectors = [
             "//a[contains(text(),'Log in')]",
             "//a[contains(text(),'Sign in')]",
@@ -219,7 +219,7 @@ def attempt_automatic_login():
             "//button[contains(text(),'Sign in')]",
             ".login-btn",
             "[data-test-id='login-button']",
-            "input[name='email']"  # Přímé hledání email pole
+            "input[name='email']"  # Direct search for email field
         ]
         
         login_element = None
@@ -238,17 +238,17 @@ def attempt_automatic_login():
                 continue
         
         if not login_element:
-            logging.warning("Login formulář nebyl nalezen")
+            logging.warning("Login form not found")
             return False
         
-        # Pokud najdeme přímo email pole, jsme už na login stránce
+        # If we find email field directly, we're already on login page
         if login_element.get_attribute("name") == "email":
             email_input = login_element
         else:
-            # Kliknout na login tlačítko
+            # Click login button
             login_element.click()
             time.sleep(3)
-            # Najít email pole
+            # Find email field
             email_input = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.NAME, "email"))
             )
@@ -261,53 +261,53 @@ def attempt_automatic_login():
         password_input.send_keys(MAGISTO_PASSWORD)
         password_input.send_keys(Keys.RETURN)
         
-        # Počkání na přihlášení
+        # Wait for login
         time.sleep(8)
         return check_if_logged_in()
         
     except Exception as e:
-        logging.error(f"Automatické přihlášení selhalo: {e}")
+        logging.error(f"Automatic login failed: {e}")
         return False
 
-# Spuštění přihlášení
-logging.info("🚀 Začínám proces přihlášení...")
+# Start login process
+logging.info("🚀 Starting login process...")
 
-# Nejdříve zkontrolovat, jestli už nejsme přihlášeni
+# First check if already logged in
 if check_if_logged_in():
-    logging.info("✅ Už jste přihlášeni! Přeskakuji login proces.")
+    logging.info("✅ Already logged in! Skipping login process.")
 else:
     if not login_to_magisto():
-        logging.error("❌ Přihlášení selhalo, ukončuji script")
+        logging.error("❌ Login failed, exiting script")
         driver.quit()
         exit(1)
 
-# === KROK 2: Načíst videa (nekonečné scrollování) ===
+# === STEP 2: Load videos (infinite scrolling) ===
 def load_all_videos():
-    """Načtení všech videí pomocí nekonečného scrollování"""
-    logging.info("[2/5] Načítám videa...")
+    """Load all videos using infinite scrolling"""
+    logging.info("[2/5] Loading videos...")
     
     current_url = driver.current_url
-    logging.info(f"Aktuální URL po přihlášení: {current_url}")
+    logging.info(f"Current URL after login: {current_url}")
     
-    # Nejdříve zkontrolovat, zda už nejsme na stránce s videi
+    # First check if we're already on videos page
     if '/video/' in current_url or '/my-movies' in current_url or 'mine' in current_url:
-        logging.info("✅ Už jsme na stránce s videi! Přeskakuji navigaci.")
-        # Zkusit najít videa na aktuální stránce
+        logging.info("✅ Already on videos page! Skipping navigation.")
+        # Try to find videos on current page
         if check_for_videos_on_page():
-            logging.info("✅ Videa nalezena na aktuální stránce")
+            logging.info("✅ Videos found on current page")
         else:
-            logging.info("⚠️ Na aktuální stránce nejsou videa, zkouším jiné URL...")
+            logging.info("⚠️ No videos on current page, trying other URLs...")
             return try_alternative_video_urls()
     else:
-        # Pokud nejsme na stránce s videi, zkusit navigovat
-        logging.info("📍 Navigace na stránku s videi...")
+        # If not on videos page, try to navigate
+        logging.info("📍 Navigating to videos page...")
         return try_alternative_video_urls()
     
-    # Nekonečné scrollování na aktuální stránce
+    # Infinite scrolling on current page
     return perform_infinite_scroll_and_collect()
 
 def check_for_videos_on_page():
-    """Zkontroluje, zda jsou na aktuální stránce videa"""
+    """Check if there are videos on current page"""
     try:
         video_selectors = [
             "a[data-test-id='movie-card']",
@@ -325,21 +325,21 @@ def check_for_videos_on_page():
             try:
                 elements = driver.find_elements(By.CSS_SELECTOR, selector)
                 if elements:
-                    logging.info(f"   → Nalezeno {len(elements)} videí pomocí selektoru: {selector}")
+                    logging.info(f"   → Found {len(elements)} videos using selector: {selector}")
                     return True
             except:
                 continue
         
         return False
     except Exception as e:
-        logging.warning(f"Chyba při kontrole videí: {e}")
+        logging.warning(f"Error checking for videos: {e}")
         return False
 
 def try_alternative_video_urls():
-    """Zkusí různé URL pro stránku s videi"""
+    """Try different URLs for videos page"""
     video_urls_to_try = [
-        # Nezkoušet znovu aktuální URL pokud už tam jsme
-        None,  # placeholder pro aktuální URL
+        # Don't try current URL again if already there
+        None,  # placeholder for current URL
         "https://www.magisto.com/video/mine",
         "https://www.magisto.com/my-movies",
         "https://www.magisto.com/videos",
@@ -350,43 +350,43 @@ def try_alternative_video_urls():
     
     current_url = driver.current_url
     
-    # Pokud už jsme na některé z target URL, začít přímo scrollováním
+    # If already on one of target URLs, start scrolling directly
     for target_url in video_urls_to_try[1:]:  # Skip None placeholder
         if target_url and target_url in current_url:
-            logging.info(f"✅ Už jsme na target URL: {current_url}")
+            logging.info(f"✅ Already on target URL: {current_url}")
             return perform_infinite_scroll_and_collect()
     
-    # Zkusit navigovat na různé URL
+    # Try navigating to different URLs
     for idx, url in enumerate(video_urls_to_try[1:], 1):  # Skip None placeholder
         try:
-            logging.info(f"🔄 Zkouším URL {idx}: {url}")
+            logging.info(f"🔄 Trying URL {idx}: {url}")
             driver.get(url)
             time.sleep(5)
             
-            # Kontrola, zda se stránka načetla úspěšně
+            # Check if page loaded successfully
             if "error" in driver.title.lower() or "not found" in driver.page_source.lower():
-                logging.warning(f"   ❌ URL {url} vrátil chybu")
+                logging.warning(f"   ❌ URL {url} returned error")
                 continue
             
-            # Kontrola, zda jsou videa na stránce
+            # Check if there are videos on page
             if check_for_videos_on_page():
-                logging.info(f"✅ Úspěšně načteno na URL: {url}")
+                logging.info(f"✅ Successfully loaded on URL: {url}")
                 return perform_infinite_scroll_and_collect()
             else:
-                logging.info(f"   ⚠️ Na URL {url} nejsou videa")
+                logging.info(f"   ⚠️ No videos on URL {url}")
                 
         except Exception as e:
-            logging.warning(f"   ❌ URL {url} selhalo: {e}")
+            logging.warning(f"   ❌ URL {url} failed: {e}")
             continue
     
-    logging.error("❌ Nepodařilo se načíst žádnou stránku s videi")
+    logging.error("❌ Failed to load any videos page")
     return []
 
 def perform_infinite_scroll_and_collect():
-    """Provede nekonečné scrollování a sebere všechna videa"""
-    logging.info("🔄 Spouštím nekonečné scrollování...")
+    """Perform infinite scrolling and collect all videos"""
+    logging.info("🔄 Starting infinite scrolling...")
     
-    # Nekonečné scrollování
+    # Infinite scrolling
     last_height = driver.execute_script("return document.body.scrollHeight")
     scroll_tries = 0
     MAX_SCROLL_TRIES = 15
@@ -398,15 +398,15 @@ def perform_infinite_scroll_and_collect():
         
         if new_height == last_height:
             scroll_tries += 1
-            logging.info(f"   📜 Scroll pokus {scroll_tries}/{MAX_SCROLL_TRIES}")
+            logging.info(f"   📜 Scroll attempt {scroll_tries}/{MAX_SCROLL_TRIES}")
         else:
             scroll_tries = 0
             last_height = new_height
-            logging.info("   📜 Načítám další videa...")
+            logging.info("   📜 Loading more videos...")
     
-    logging.info("[3/5] ✅ Scrollování dokončeno, sbírám odkazy na videa...")
+    logging.info("[3/5] ✅ Scrolling completed, collecting video links...")
     
-    # Nalezení všech video odkazů pomocí různých selectorů
+    # Find all video links using various selectors
     video_selectors = [
         "a[data-test-id='movie-card']",
         "a[data-testid*='movie']", 
@@ -430,13 +430,13 @@ def perform_infinite_scroll_and_collect():
         try:
             links = driver.find_elements(By.CSS_SELECTOR, selector)
             if links:
-                logging.info(f"   → Selector '{selector}': {len(links)} odkazů")
+                logging.info(f"   → Selector '{selector}': {len(links)} links")
             all_video_links.extend(links)
         except Exception as e:
-            logging.debug(f"   ⚠️ Selector '{selector}' selhal: {e}")
+            logging.debug(f"   ⚠️ Selector '{selector}' failed: {e}")
             continue
     
-    # Odstranění duplikátů a získání URL
+    # Remove duplicates and get URLs
     video_urls = []
     seen_urls = set()
     
@@ -444,39 +444,39 @@ def perform_infinite_scroll_and_collect():
         try:
             href = link.get_attribute("href")
             if href and href not in seen_urls:
-                # Kontrola, zda URL obsahuje video identifikátor a NENÍ to main page
+                # Check if URL contains video identifier and is NOT main page
                 if (any(pattern in href for pattern in ['/video/', '/movie/', '/watch/', '/view/']) and
                     not any(excluded in href for excluded in ['/video/mine', '/my-movies', '/videos', '/dashboard'])):
                     
-                    # Extra kontrola - URL by mělo mít nějaký ID na konci
-                    if len(href.split('/')[-1]) > 3:  # Minimální délka ID
+                    # Extra check - URL should have some ID at the end
+                    if len(href.split('/')[-1]) > 3:  # Minimum ID length
                         video_urls.append(href)
                         seen_urls.add(href)
         except:
             continue
     
-    logging.info(f"🎬 Nalezeno celkem {len(video_urls)} unikátních videí")
+    logging.info(f"🎬 Found {len(video_urls)} unique videos")
     
-    # Zobrazit několik příkladů URL pro debugging
+    # Show some example URLs for debugging
     if video_urls:
-        logging.info("📋 Příklady nalezených video URL:")
-        for i, url in enumerate(video_urls[:5]):  # Zobrazit prvních 5
+        logging.info("📋 Examples of found video URLs:")
+        for i, url in enumerate(video_urls[:5]):  # Show first 5
             logging.info(f"   {i+1}. {url}")
         if len(video_urls) > 5:
-            logging.info(f"   ... a dalších {len(video_urls) - 5} videí")
+            logging.info(f"   ... and {len(video_urls) - 5} more videos")
     else:
-        # Debug info pokud nejsou nalezena žádná videa
-        logging.warning("⚠️ Nebyla nalezena žádná videa! Debug info:")
+        # Debug info if no videos found
+        logging.warning("⚠️ No videos found! Debug info:")
         
-        # Zkusit najít všechny odkazy na stránce
+        # Try to find all links on page
         all_links = driver.find_elements(By.CSS_SELECTOR, "a[href]")
-        logging.info(f"   Celkem nalezeno {len(all_links)} odkazů na stránce")
+        logging.info(f"   Total links found on page: {len(all_links)}")
         
-        # Zobrazit prvních 10 odkazů pro debugging
+        # Show first 10 links for debugging
         for i, link in enumerate(all_links[:10]):
             try:
                 href = link.get_attribute("href")
-                text = link.text.strip()[:50]  # První 50 znaků textu
+                text = link.text.strip()[:50]  # First 50 characters of text
                 logging.info(f"   {i+1}. {href} (text: '{text}')")
             except:
                 continue
@@ -486,23 +486,23 @@ def perform_infinite_scroll_and_collect():
 video_urls = load_all_videos()
 
 if not video_urls:
-    logging.error("❌ Nebyla nalezena žádná videa.")
+    logging.error("❌ No videos found.")
     logging.info("🔍 DEBUG INFO:")
-    logging.info(f"   Aktuální URL: {driver.current_url}")
-    logging.info(f"   Titulek stránky: {driver.title}")
+    logging.info(f"   Current URL: {driver.current_url}")
+    logging.info(f"   Page title: {driver.title}")
     
-    # Výpis několika elementů na stránce pro debugging
+    # Output some page elements for debugging
     try:
-        # Zkusit najít všechny odkazy na stránce
+        # Try to find all links on page
         all_links = driver.find_elements(By.CSS_SELECTOR, "a[href]")
-        logging.info(f"   Celkem nalezeno {len(all_links)} odkazů na stránce")
+        logging.info(f"   Total links found on page: {len(all_links)}")
         
-        # Najít odkazy s 'video' v URL
+        # Find links with 'video' in URL
         video_links = [link for link in all_links if '/video/' in link.get_attribute("href")]
-        logging.info(f"   Z toho {len(video_links)} obsahuje '/video/' v URL")
+        logging.info(f"   Of those {len(video_links)} contain '/video/' in URL")
         
-        # Zobrazit prvních 10 video odkazů
-        logging.info("   Příklady nalezených '/video/' odkazů:")
+        # Show first 10 video links
+        logging.info("   Examples of found '/video/' links:")
         for i, link in enumerate(video_links[:10]):
             try:
                 href = link.get_attribute("href")
@@ -511,71 +511,71 @@ if not video_urls:
             except:
                 continue
         
-        # Zkusit najít jakékoliv obrázky, které by mohly být thumbnaily
+        # Try to find any images that could be thumbnails
         images = driver.find_elements(By.CSS_SELECTOR, "img")
-        logging.info(f"   Nalezeno {len(images)} obrázků na stránce")
+        logging.info(f"   Found {len(images)} images on page")
         
-        # Uložit screenshot pro debugging
+        # Save screenshot for debugging
         try:
             screenshot_path = "debug_page_screenshot.png"
             driver.save_screenshot(screenshot_path)
-            logging.info(f"   📸 Screenshot uložen: {screenshot_path}")
+            logging.info(f"   📸 Screenshot saved: {screenshot_path}")
         except:
             pass
         
     except Exception as e:
-        logging.warning(f"   Chyba při debugging: {e}")
+        logging.warning(f"   Error during debugging: {e}")
     
-    logging.info("💡 NÁVRHY:")
-    logging.info("   1. Zkontroluj ručně, zda vidíš videa v prohlížeči")
-    logging.info("   2. Možná Magisto změnil strukturu stránek")
-    logging.info("   3. Zkus počkat déle na načtení stránky")
+    logging.info("💡 SUGGESTIONS:")
+    logging.info("   1. Check manually if you can see videos in browser")
+    logging.info("   2. Maybe Magisto changed page structure")
+    logging.info("   3. Try waiting longer for page to load")
     
     driver.quit()
     exit(1)
 
-# Extra validace nalezených URL
-logging.info("🔍 Kontroluji kvalitu nalezených URL...")
+# Extra validation of found URLs
+logging.info("🔍 Checking quality of found URLs...")
 valid_video_urls = []
 invalid_urls = []
 
 for url in video_urls:
-    # Kontrola, zda URL vypadá jako jednotlivé video
-    if (url.count('/') >= 4 and  # Minimální struktura URL
+    # Check if URL looks like individual video
+    if (url.count('/') >= 4 and  # Minimum URL structure
         not any(excluded in url for excluded in ['/mine', '/my-movies', '/videos', '/dashboard']) and
-        len(url.split('/')[-1]) >= 5):  # ID videa má aspoň 5 znaků
+        len(url.split('/')[-1]) >= 5):  # Video ID has at least 5 characters
         valid_video_urls.append(url)
     else:
         invalid_urls.append(url)
 
 if invalid_urls:
-    logging.warning(f"⚠️ Vyřazeno {len(invalid_urls)} neplatných URL:")
-    for invalid_url in invalid_urls[:5]:  # Zobrazit jen prvních 5
+    logging.warning(f"⚠️ Filtered out {len(invalid_urls)} invalid URLs:")
+    for invalid_url in invalid_urls[:5]:  # Show only first 5
         logging.warning(f"   - {invalid_url}")
 
 video_urls = valid_video_urls
-logging.info(f"✅ Finální počet platných video URL: {len(video_urls)}")
+logging.info(f"✅ Final count of valid video URLs: {len(video_urls)}")
 
 if not video_urls:
-    logging.error("❌ Po validaci nezbylo žádné platné video URL!")
+    logging.error("❌ No valid video URLs remaining after validation!")
     driver.quit()
     exit(1)
 
-# === KROK 3: Stáhni každé video ===
+# === STEP 3: Download each video ===
 def get_video_id_from_url(video_url):
-    """Extrahuje video ID z URL pro identifikaci stažených souborů"""
+    """Extract video ID from URL for identifying downloaded files"""
     try:
-        # Např. https://www.magisto.com/video/P14WY1NQHDE9VQNhCzE -> P14WY1NQHDE9VQNhCzE
+        # e.g. https://www.magisto.com/video/P14WY1NQHDE9VQNhCzE -> P14WY1NQHDE9VQNhCzE
         return video_url.split('/')[-1]
     except:
         return None
 
 def get_video_name_from_widget(driver):
-    """Získá název videa přímo z video widgetu (tam kde je i download tlačítko)"""
+    """Get video name directly from video widget (where download button is)"""
     try:
-        # Možné selektory pro název videa v rámci video widgetu
+        # Possible selectors for video name in video widget
         video_name_selectors = [
-            "h1",  # Často hlavní nadpis
+            "h1",  # Often main heading
             "h2", 
             "h3",
             ".video-title",
@@ -584,7 +584,7 @@ def get_video_name_from_widget(driver):
             ".media-title",
             "[data-test-id='video-title']",
             "[data-testid='video-title']",
-            # Hledat text v blízkosti download tlačítka
+            # Search for text near download button
             "//span[contains(text(),'Download')]/../..//h1",
             "//span[contains(text(),'Download')]/../..//h2", 
             "//span[contains(text(),'Download')]/../..//h3",
@@ -601,35 +601,35 @@ def get_video_name_from_widget(driver):
                 
                 title = title_element.text.strip()
                 
-                # Filtrovat nežádoucí texty
+                # Filter unwanted text
                 if (title and len(title) > 2 and 
                     "Magisto" not in title and 
                     "Download" not in title and
                     "Page not Found" not in title and
-                    not title.isdigit() and  # Není jen číslo
-                    ":" not in title):  # Není časový kód
+                    not title.isdigit() and  # Is not just a number
+                    ":" not in title):  # Is not a time code
                     
-                    logging.info(f"   📝 Nalezen název videa: '{title}'")
+                    logging.info(f"   📝 Found video name: '{title}'")
                     return title
             except:
                 continue
                 
-        logging.warning("   ⚠️ Nepodařilo se najít název videa ve widgetu")
+        logging.warning("   ⚠️ Could not find video name in widget")
         return None
         
     except Exception as e:
-        logging.error(f"   ❌ Chyba při získávání názvu videa: {e}")
+        logging.error(f"   ❌ Error getting video name: {e}")
         return None
 
 def is_video_already_downloaded_by_name(driver, video_url, download_dir):
-    """Kontroluje, zda je video již staženo - vylepšená verze používající název z widgetu"""
+    """Check if video is already downloaded - enhanced version using widget name"""
     import glob
     
     video_id = get_video_id_from_url(video_url)
     if not video_id:
         return False, None
     
-    # Metoda 1: Hledat podle video ID v názvu souboru
+    # Method 1: Search by video ID in filename
     search_patterns = [
         f"*{video_id}*.mp4",
         f"*{video_id}*.mov", 
@@ -643,7 +643,7 @@ def is_video_already_downloaded_by_name(driver, video_url, download_dir):
         if matching_files:
             return True, matching_files[0]
     
-    # Metoda 2: Hledat podle mapování URL -> soubor
+    # Method 2: Search by URL -> file mapping
     mapping_file = os.path.join(download_dir, "download_mapping.txt")
     if os.path.exists(mapping_file):
         try:
@@ -658,28 +658,28 @@ def is_video_already_downloaded_by_name(driver, video_url, download_dir):
         except:
             pass
     
-    # Metoda 3: NOVÁ - Kontrola podle názvu z video widgetu
-    logging.info(f"   🔍 Získávám název videa z widgetu...")
+    # Method 3: NEW - Check by widget name
+    logging.info(f"   🔍 Getting video name from widget...")
     
-    # Stránka už je načtená, jen získáme název
+    # Page is already loaded, just get the name
     video_name = get_video_name_from_widget(driver)
     
-    # NOVÉ: Pokud je video bez názvu ("Untitled"), vždy stáhnout
+    # NEW: If video has generic name ("Untitled"), always download
     if (video_name and 
         (video_name.lower() in ['untitled', 'bez názvu', 'no title', 'no name', 'untitled video', 'new video', 'video', 'my video'] or
-         len(video_name.strip()) <= 2)):  # Velmi krátké názvy (1-2 znaky) považovat za obecné
-        logging.info(f"   ⚠️ Video má obecný název '{video_name}' - bude staženo znovu pro lepší pojmenování")
-        logging.info(f"   💡 Obecné názvy jako 'Untitled', 'My video' se nikdy nepřeskakují")
+         len(video_name.strip()) <= 2)):  # Very short names (1-2 chars) considered generic
+        logging.info(f"   ⚠️ Video has generic name '{video_name}' - will be downloaded again for better naming")
+        logging.info(f"   💡 Generic names like 'Untitled', 'My video' are never skipped")
         return False, None
     
     if video_name:
-        logging.info(f"   🔍 Hledám soubory pro název '{video_name}'...")
+        logging.info(f"   🔍 Searching for files with name '{video_name}' (length: {len(video_name)} chars)...")
         
-        # Hledat soubory začínající názvem videa s různými příponami
+        # Search for files starting with video name with various extensions
         video_extensions = ['mp4', 'avi', 'mov', 'mkv', 'wmv', 'webm']
         
         for ext in video_extensions:
-            # Metoda 3a: Přesná shoda pro krátké názvy
+            # Method 3a: Exact match for short names
             exact_patterns = [
                 f"{video_name}.{ext}",
                 f"{video_name}_HD.{ext}",
@@ -691,45 +691,41 @@ def is_video_already_downloaded_by_name(driver, video_url, download_dir):
             for pattern_name in exact_patterns:
                 full_path = os.path.join(download_dir, pattern_name)
                 if os.path.exists(full_path):
-                    logging.info(f"   ✅ Nalezeno přesnou shodou: '{pattern_name}'")
+                    logging.info(f"   ✅ Found by exact match: '{pattern_name}'")
                     return True, full_path
             
-            # Metoda 3b: Wildcard pro dlouhé názvy (pro případ, že by Magisto nezkrátil)
+            # Method 3b: Wildcard for long names (in case Magisto didn't truncate)
             pattern = os.path.join(download_dir, f"{video_name}*.{ext}")
             matching_files = glob.glob(pattern)
             
             if matching_files:
                 filename = os.path.basename(matching_files[0])
-                logging.info(f"   ✅ Nalezeno wildcard shodou: '{filename}'")
+                logging.info(f"   ✅ Found by wildcard match: '{filename}'")
                 return True, matching_files[0]
         
-        # Metoda 3c: NOVÁ - Kontrola zkrácených názvů (až 20 znaků + kvalita)
-        # Magisto zkracuje dlouhé názvy na ~20 znaků a přidává _FULL_HD, _HD, atd.
+        # Method 3c: NEW - Check truncated names (up to 20 chars + quality)
+        # Magisto truncates long names to ~20 chars and adds _FULL_HD, _HD, etc.
         if len(video_name) > 20:
-            truncated_name = video_name[:20]  # Prvních 20 znaků
-            logging.info(f"   🔍 Název je dlouhý ({len(video_name)} znaků), zkouším zkrácenou verzi: '{truncated_name}'")
+            truncated_name = video_name[:20]  # First 20 characters
+            logging.info(f"   🔍 Name is long ({len(video_name)} chars), trying truncated version: '{truncated_name}'")
             
             for ext in video_extensions:
-                # Hledat soubory začínající zkráceným názvem
-                truncated_patterns = [
-                    f"{truncated_name}*.{ext}",  # Wildcard pro jakékoliv zakončení
-                ]
+                # Search for files starting with truncated name
+                pattern = os.path.join(download_dir, f"{truncated_name}*.{ext}")
+                matching_files = glob.glob(pattern)
                 
-                for pattern in truncated_patterns:
-                    matching_files = glob.glob(os.path.join(download_dir, pattern))
-                    
-                    for match in matching_files:
-                        filename = os.path.basename(match)
-                        # Ověřit, že soubor skutečně začíná názvem videa (ne jen náhodou)
-                        if filename.lower().startswith(truncated_name.lower()):
-                            logging.info(f"   ✅ Nalezeno podle zkráceného názvu: '{filename}'")
-                            return True, match
+                for match in matching_files:
+                    filename = os.path.basename(match)
+                    # Verify file actually starts with video name (not just coincidence)
+                    if filename.lower().startswith(truncated_name.lower()):
+                        logging.info(f"   ✅ Found by truncated name (20 chars): '{filename}'")
+                        return True, match
         
-        # Metoda 3d: Flexibilní hledání podle začátku názvu (pro různé délky zkrácení)
-        # Zkusíme různé délky zkrácení (15-25 znaků)
+        # Method 3d: Flexible search by name beginning (for various truncation lengths)
+        # Try different truncation lengths (15-25 chars)
         for truncate_length in range(15, min(26, len(video_name) + 1)):
             if truncate_length >= len(video_name):
-                continue  # Už jsme zkoušeli přesnou shodu
+                continue  # Already tried exact match
                 
             truncated = video_name[:truncate_length]
             
@@ -739,28 +735,28 @@ def is_video_already_downloaded_by_name(driver, video_url, download_dir):
                 
                 for match in matching_files:
                     filename = os.path.basename(match)
-                    # Ověřit, že se jedná o stejné video (začátek názvu se shoduje)
-                    base_name = os.path.splitext(filename)[0]  # Bez přípony
-                    # Odstranit kvalitativní sufixy
+                    # Verify it's the same video (name beginning matches)
+                    base_name = os.path.splitext(filename)[0]  # Without extension
+                    # Remove quality suffixes
                     clean_base = base_name.replace('_FULL_HD', '').replace('_HD', '').replace('_HQ', '').replace('_FULL', '')
                     
                     if clean_base.lower().startswith(truncated.lower()) and len(clean_base) <= len(video_name):
-                        logging.info(f"   ✅ Nalezeno flexibilním hledáním (zkráceno na {truncate_length} znaků): '{filename}'")
+                        logging.info(f"   ✅ Found by flexible search (truncated to {truncate_length} chars): '{filename}'")
                         return True, match
         
-        logging.info(f"   ❌ Žádný soubor pro název '{video_name}' nenalezen (ani zkrácený)")
+        logging.info(f"   ❌ No file found for name '{video_name}' (even truncated)")
     else:
-        logging.warning("   ⚠️ Nepodařilo se získat název videa z widgetu")
+        logging.warning("   ⚠️ Could not get video name from widget")
     
     return False, None
 
 def save_download_mapping(video_url, downloaded_file, download_dir):
-    """Uloží mapování URL -> název souboru pro budoucí skip detekci"""
+    """Save URL -> filename mapping for future skip detection"""
     try:
         mapping_file = os.path.join(download_dir, "download_mapping.txt")
         file_name = os.path.basename(downloaded_file)
         
-        # Zkontrolovat, zda už mapování neexistuje
+        # Check if mapping already exists
         existing_mappings = set()
         if os.path.exists(mapping_file):
             try:
@@ -774,42 +770,42 @@ def save_download_mapping(video_url, downloaded_file, download_dir):
             with open(mapping_file, 'a', encoding='utf-8') as f:
                 f.write(f"{new_mapping}\n")
     except Exception as e:
-        logging.warning(f"Nepodařilo se uložit mapování: {e}")
+        logging.warning(f"Could not save mapping: {e}")
 
 def download_video(video_url, video_index, total_videos):
-    """Stáhnutí jednoho videa s error handlingem a vylepšenou skip kontrolou podle názvu"""
+    """Download one video with error handling and enhanced skip detection by name"""
     import glob
     import os
     
-    download_dir = DOWNLOAD_DIR  # Použít správnou configured cestu!
+    download_dir = DOWNLOAD_DIR  # Use correct configured path!
     
     try:
-        # Načíst stránku s videem
+        # Load video page
         driver.get(video_url)
-        time.sleep(3)  # Čekání pro načtení stránky
+        time.sleep(3)  # Wait for page to load
         
-        # NOVÝ PŘÍSTUP: Nejdřív zkontrolovat skip detection s načtenou stránkou
+        # NEW APPROACH: First check skip detection with loaded page
         already_downloaded, existing_file = is_video_already_downloaded_by_name(driver, video_url, download_dir)
         
         if already_downloaded:
-            logging.info(f"[4/5] ({video_index}/{total_videos}) ⏭️  PŘESKAKUJI - už staženo: {os.path.basename(existing_file)}")
-            return True  # Počítáme jako úspěch
+            logging.info(f"[4/5] ({video_index}/{total_videos}) ⏭️  SKIPPING - already downloaded: {os.path.basename(existing_file)}")
+            return True  # Count as success
         
-        logging.info(f"[4/5] ({video_index}/{total_videos}) Navštěvuji {video_url}")
+        logging.info(f"[4/5] ({video_index}/{total_videos}) Visiting {video_url}")
         
-        # Stránka už je načtená, jen počkáme na widget
-        time.sleep(5)  # Dodatečné čekání pro načtení video widgetu
+        # Page is already loaded, just wait for widget
+        time.sleep(5)  # Additional wait for video widget to load
         
-        # OPRAVENÉ selektory pro download tlačítko
+        # FIXED selectors for download button
         download_selectors = [
-            "//span[contains(text(),'Download')]",  # ✅ Hlavní selector - SPAN element
+            "//span[contains(text(),'Download')]",  # ✅ Main selector - SPAN element
             "//button[contains(text(),'Download')]",
             "//button[contains(text(),'download')]",
             "//a[contains(text(),'Download')]",
             "//a[contains(text(),'download')]",
             "//button[contains(@class,'download')]",
             "//a[contains(@class,'download')]",
-            "//span[contains(@class,'download')]",  # Přidáno pro span elementy
+            "//span[contains(@class,'download')]",  # Added for span elements
             "[data-test-id*='download']",
             "[data-testid*='download']",
             ".download-btn",
@@ -830,19 +826,19 @@ def download_video(video_url, video_index, total_videos):
                 continue
         
         if download_btn:
-            # Uložit seznam souborů před kliknutím
+            # Save list of files before clicking
             initial_files = set(glob.glob(os.path.join(download_dir, "*")))
             
             download_btn.click()
-            logging.info("     → Kliknuto na Download tlačítko...")
+            logging.info("     → Clicked Download button...")
             
-            # Počkat chvíli a zkontrolovat, jestli se neobjevil popup
+            # Wait a moment and check if popup appeared
             time.sleep(3)
             
-            # OPRAVENÉ selektory pro potvrzovací popup pro starší videa
+            # FIXED selectors for confirmation popup for older videos
             confirmation_selectors = [
-                "//button[contains(text(),'Download')]",  # Druhé download tlačítko v popupu
-                "//span[contains(text(),'Download')]",   # Druhé download span v popupu
+                "//button[contains(text(),'Download')]",  # Second download button in popup
+                "//span[contains(text(),'Download')]",   # Second download span in popup
                 "//button[contains(text(),'Confirm')]",
                 "//button[contains(text(),'OK')]",
                 "//button[contains(text(),'Yes')]",
@@ -854,62 +850,62 @@ def download_video(video_url, video_index, total_videos):
             popup_found = False
             for selector in confirmation_selectors:
                 try:
-                    # Všechny jsou XPath selektory
+                    # All are XPath selectors
                     confirmation_btn = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, selector))
                     )
                     
-                    # Ověřit, že to není stejné tlačítko jako předtím
+                    # Verify it's not the same button as before
                     if confirmation_btn != download_btn:
                         confirmation_btn.click()
-                        logging.info("     → Potvrzeno v popup dialogu...")
+                        logging.info("     → Confirmed in popup dialog...")
                         popup_found = True
                         break
                 except TimeoutException:
                     continue
             
             if not popup_found:
-                logging.info("     → Žádný popup nebyl detekován")
+                logging.info("     → No popup detected")
             
-            # Čekání na začátek downloadu
+            # Wait for download to start
             time.sleep(WAIT_AFTER_DOWNLOAD)
             
-            # Zkontrolujeme, jestli se objevil nový soubor
+            # Check if new file appeared
             final_files = set(glob.glob(os.path.join(download_dir, "*")))
             new_files = final_files - initial_files
             
             if new_files:
                 new_file_path = list(new_files)[0]
                 new_file_name = os.path.basename(new_file_path)
-                logging.info(f"     ✅ Nový soubor stažen: {new_file_name}")
+                logging.info(f"     ✅ New file downloaded: {new_file_name}")
                 
-                # Uložit mapování pro budoucí skip detekci
+                # Save mapping for future skip detection
                 save_download_mapping(video_url, new_file_path, download_dir)
             else:
-                logging.info("     ⏳ Download možná stále probíhá...")
+                logging.info("     ⏳ Download may still be in progress...")
             
             return True
         else:
-            logging.warning("     ❌ Chyba: tlačítko 'Download' nenalezeno.")
+            logging.warning("     ❌ Error: 'Download' button not found.")
             return False
             
     except Exception as e:
-        logging.error(f"     ❌ Chyba při zpracování videa {video_url}: {e}")
+        logging.error(f"     ❌ Error processing video {video_url}: {e}")
         return False
 
-# Hlavní loop pro stahování
+# Main download loop
 successful_downloads = 0
 failed_downloads = 0
 skipped_downloads = 0
 
-logging.info(f"🚀 Zahajuji stahování {len(video_urls)} videí...")
-logging.info("   (Již stažená videa budou automaticky přeskočena)")
+logging.info(f"🚀 Starting download of {len(video_urls)} videos...")
+logging.info("   (Already downloaded videos will be automatically skipped)")
 
 for idx, url in enumerate(video_urls, 1):
-    # Kontrola, zda už není video stažené (pro statistiky před voláním download_video)
-    download_dir = DOWNLOAD_DIR  # Použít správnou configured cestu!
+    # Check if video is already downloaded (for statistics before calling download_video)
+    download_dir = DOWNLOAD_DIR  # Use correct configured path!
     
-    # Krátce načíst stránku pro kontrolu
+    # Briefly load page for check
     already_downloaded = False
     try:
         driver.get(url)
@@ -927,27 +923,27 @@ for idx, url in enumerate(video_urls, 1):
         failed_downloads += 1
 
 logging.info("=" * 60)
-logging.info(f"[5/5] ✅ DOKONČENO! Celkové statistiky:")
-logging.info(f"   📥 Nově staženo: {successful_downloads}")
-logging.info(f"   ⏭️  Přeskočeno (už staženo): {skipped_downloads}")
-logging.info(f"   ❌ Chyby: {failed_downloads}")
-logging.info(f"   📊 Celkem zpracováno: {successful_downloads + skipped_downloads + failed_downloads}")
+logging.info(f"[5/5] ✅ COMPLETED! Overall statistics:")
+logging.info(f"   📥 Newly downloaded: {successful_downloads}")
+logging.info(f"   ⏭️  Skipped (already downloaded): {skipped_downloads}")
+logging.info(f"   ❌ Errors: {failed_downloads}")
+logging.info(f"   📊 Total processed: {successful_downloads + skipped_downloads + failed_downloads}")
 
-# Zobrazit informace o stažených souborech
-download_dir = DOWNLOAD_DIR  # Použít správnou configured cestu!
+# Show information about downloaded files
+download_dir = DOWNLOAD_DIR  # Use correct configured path!
 if os.path.exists(download_dir):
     import glob
     all_videos = []
     for ext in ['*.mp4', '*.mov', '*.avi', '*.mkv', '*.webm']:
         all_videos.extend(glob.glob(os.path.join(download_dir, ext)))
     
-    logging.info(f"📁 Celkem videí ve složce downloads: {len(all_videos)}")
+    logging.info(f"📁 Total videos in downloads folder: {len(all_videos)}")
     
-    # Zobrazit velikost složky
+    # Show folder size
     try:
         total_size = sum(os.path.getsize(f) for f in all_videos if os.path.isfile(f))
         size_gb = total_size / (1024**3)
-        logging.info(f"💾 Celková velikost: {size_gb:.2f} GB")
+        logging.info(f"💾 Total size: {size_gb:.2f} GB")
     except:
         pass
 

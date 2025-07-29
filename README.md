@@ -1,52 +1,227 @@
-# 🧠 Magisto Video Downloader
+# Magisto Video Downloader
 
-This project was created to automate the **backup of all videos created in the online editor [Magisto.com](https://www.magisto.com)**. The user has over 100 videos in their account, but Magisto does not offer a bulk download option.
+An automated Python script to download all your videos from Magisto.com using Selenium WebDriver.
 
-## ⚙️ Features
+## Features
 
-- **Manual login support** - No need to store credentials in code!
-- **Chrome browser support** with automatic ChromeDriver management
-- **Automated login process** with robust error handling
-- **Smart video discovery** with multiple selector fallbacks
-- **Infinite scrolling** to load all videos from lazy-loaded content
-- **Bulk download** with progress tracking and error recovery
-- **Comprehensive logging** to file and console
-- **Anti-detection measures** to prevent bot detection
-- **Configurable timeouts** and retry mechanisms
+### ✅ **Smart Skip Detection**
+- **Filename-based matching**: Uses video widget names for accurate skip detection
+- **Truncation handling**: Handles Magisto's filename truncation (20+ character names)  
+- **Multiple detection methods**: ID-based, mapping file, and widget name matching
+- **Flexible truncation**: Supports various truncation lengths (15-25 characters)
 
-## 🚀 Installation
+### ✅ **Generic Name Re-download**
+Always re-downloads videos with generic names for better naming:
+- `Untitled`, `My video`, `New video`, `Video`
+- `No title`, `No name`, `Bez názvu` (Czech)
+- Any name ≤ 2 characters
+
+### ✅ **Popup Handling**
+- Automatically handles confirmation popups for older videos
+- Multiple selector strategies for reliable popup detection
+
+### ✅ **Browser Support**
+- **Chrome** (recommended)
+- **Brave** (experimental - may have ChromeDriver compatibility issues)
+
+### ✅ **Robust Error Handling**
+- Retry mechanisms for network issues
+- Detailed logging for debugging
+- Skip detection prevents duplicate downloads
+
+## Requirements
+
+- Python 3.7+
+- Chrome or Brave browser
+- Internet connection
+
+## Installation
 
 1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Nowass/magisto-collector.git
-   cd magisto-collector
-   ```
+```bash
+git clone https://github.com/Nowass/magisto-collector
+cd magisto-collector
+```
 
-2. **Create and activate a virtual environment:**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # On Linux/Mac
-   # or
-   .venv\Scripts\activate     # On Windows
-   ```
+2. **Install dependencies:**
+```bash
+pip install selenium webdriver-manager
+```
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Configuration
 
-4. **Install Google Chrome (recommended):**
-   ```bash
-   # For Ubuntu/Debian:
-   wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-   echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
-   sudo apt update
-   sudo apt install -y google-chrome-stable
-   ```
-   
-   *Or download from [chrome.google.com](https://www.google.com/chrome/) for other systems.*
+Edit the configuration section in `magisto_downloader.py`:
 
-## 🔧 Configuration
+```python
+# === CONFIGURATION ===
+MAGISTO_EMAIL = ""  # Leave empty for manual login
+MAGISTO_PASSWORD = ""  # Leave empty for manual login  
+DOWNLOAD_DIR = "/path/to/your/download/folder"  # Adjust to your needs
+BROWSER_TYPE = "chrome"  # "chrome" or "brave"
+
+# Timing settings
+WAIT_AFTER_DOWNLOAD = 10  # seconds to wait after clicking download
+LOGIN_TIMEOUT = 20  # timeout for login elements
+DOWNLOAD_TIMEOUT = 15  # timeout for download button
+```
+
+## Usage
+
+### Main Script
+```bash
+python magisto_downloader.py
+```
+
+### Test Single Video
+```bash
+python test_single_download.py
+```
+
+## How It Works
+
+### 1. **Login Process**
+- Opens Magisto login page
+- Supports manual login (recommended)
+- Fallback to automatic login if credentials provided
+
+### 2. **Video Discovery**
+- Navigates to video library
+- Performs infinite scrolling to load all videos
+- Collects all video URLs using multiple selectors
+
+### 3. **Smart Download Process**
+For each video:
+1. **Skip Detection**: Checks if already downloaded using:
+   - Video ID matching in filenames
+   - URL mapping file lookup
+   - Widget name extraction and matching
+   - Truncation-aware filename matching
+
+2. **Generic Name Handling**: Always downloads videos with generic names
+
+3. **Download Execution**:
+   - Clicks download button
+   - Handles confirmation popups
+   - Saves download mapping for future runs
+
+### 4. **Skip Detection Logic**
+
+#### Method 1: Video ID Matching
+Searches for files containing the video ID in the filename.
+
+#### Method 2: URL Mapping File  
+Uses `download_mapping.txt` to track URL → filename relationships.
+
+#### Method 3: Widget Name Matching (Enhanced)
+- **3a**: Exact match for short names with quality suffixes (`_FULL_HD`, `_HD`, etc.)
+- **3b**: Wildcard matching for full-length names
+- **3c**: 20-character truncation detection (Magisto's standard)
+- **3d**: Flexible truncation detection (15-25 characters)
+
+#### Generic Name Override
+Videos with generic names always bypass skip detection:
+```python
+generic_names = ['untitled', 'my video', 'new video', 'video', 
+                 'no title', 'no name', 'bez názvu']
+```
+
+## File Structure
+
+```
+magisto-collector/
+├── magisto_downloader.py      # Main downloader script
+├── test_single_download.py    # Single video test script  
+├── README.md                  # This file
+├── magisto_downloader.log     # Execution log
+└── downloads/                 # Created automatically
+    ├── download_mapping.txt   # URL → filename mapping
+    └── *.mp4                  # Downloaded videos
+```
+
+## Advanced Features
+
+### Filename Truncation Handling
+Magisto truncates long video names to ~20 characters and adds quality suffixes. The script handles this by:
+
+1. **Detecting long names** (>20 characters)
+2. **Testing truncated versions** at 20 characters
+3. **Flexible length testing** (15-25 character ranges)
+4. **Quality suffix removal** for accurate matching
+
+Example:
+- Original: `"my-very-long-video-name-from-vacation-2025"`
+- Magisto saves as: `"my-very-long-video-_FULL_HD.mp4"`
+- Script detects match using truncation logic
+
+### Quality Suffix Support
+Handles all Magisto quality formats:
+- `_FULL_HD.mp4`
+- `_HD.mp4` 
+- `_HQ.mp4`
+- `_FULL.mp4`
+
+### Mapping File Format
+The `download_mapping.txt` file format:
+```
+https://www.magisto.com/video/ABC123|video_name_FULL_HD.mp4
+https://www.magisto.com/video/XYZ789|another_video_HD.mp4
+```
+
+## Troubleshooting
+
+### Browser Issues
+- **Chrome recommended**: More stable than Brave
+- **ChromeDriver auto-managed**: Uses webdriver-manager for updates
+- **Brave compatibility**: May have version conflicts
+
+### Login Problems
+- **Manual login preferred**: More reliable than automatic
+- **Session persistence**: Checks if already logged in
+- **Multiple login indicators**: Various selectors for detection
+
+### Download Issues
+- **Popup handling**: Automatic confirmation for older videos
+- **Timeout adjustments**: Modify timeout values if needed
+- **Network issues**: Script includes retry mechanisms
+
+### Skip Detection Problems
+- **Check download directory**: Ensure `DOWNLOAD_DIR` is correct
+- **Mapping file**: Verify `download_mapping.txt` exists and is readable
+- **Debug logging**: Check logs for skip detection details
+
+## Logging
+
+The script provides detailed logging:
+- **INFO**: General progress and status
+- **WARNING**: Non-critical issues
+- **ERROR**: Critical problems
+
+Log files: `magisto_downloader.log` and `test_single_download.log`
+
+## Statistics
+
+After completion, the script shows:
+- **📥 Newly downloaded**: Count of new videos
+- **⏭️ Skipped**: Count of already existing videos  
+- **❌ Errors**: Count of failed downloads
+- **📊 Total processed**: Overall statistics
+- **💾 Total size**: Disk usage of all videos
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is for personal use. Please respect Magisto's terms of service.
+
+## Disclaimer
+
+This tool is for downloading your own videos from Magisto. Users are responsible for complying with Magisto's terms of service and applicable laws.
 
 1. **Edit the script configuration** in `magisto_downloader.py`:
    ```python
